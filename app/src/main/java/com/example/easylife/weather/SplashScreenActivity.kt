@@ -2,19 +2,23 @@ package com.example.openmeteoweather
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.os.Build
 import android.os.Bundle
-import android.widget.Button
+import android.transition.TransitionInflater
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.core.Transition
+import androidx.compose.animation.core.animate
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.graphics.alpha
 import androidx.lifecycle.lifecycleScope
 import com.example.easylife.weather.LocationHelper
 import com.example.easylife.weather.WeatherRepository
@@ -24,18 +28,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
-class MainActivity : AppCompatActivity() {
+class SplashScreenActivity : AppCompatActivity() {
     private lateinit var temperatureText: TextView
     private lateinit var weatherText: TextView
     private lateinit var feelsLikeText: TextView
-    private lateinit var humidityText: TextView
-    private lateinit var windText: TextView
-    private lateinit var precipitationText: TextView
+
     private lateinit var locationText: TextView
-    private lateinit var updatedText: TextView
     private lateinit var progressBar: ProgressBar
-    private lateinit var refreshButton: Button
+
+    private lateinit var weatherImage: ImageView
 
     private lateinit var locationHelper: LocationHelper
 
@@ -64,7 +68,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-    private fun weatherCodeToImage(code: Int?): Int =
+    private fun changeImageFromWeatherCode(code: Int?): Int =
         when (code) {
             0, 1 -> R.drawable.clear
 
@@ -96,25 +100,36 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.weather)
 
-        initializeViews()
+        // Wait for 2 seconds, then open MainActivity
+        window.decorView.postDelayed({
+            val intent =
+                Intent(
+                    this,
+                    MainActivity::class.java,
+                )
 
+            startActivity(intent)
+
+            // Fade from SplashScreenActivity -> MainActivity
+            overridePendingTransition(
+                android.R.anim.fade_in,
+                android.R.anim.fade_out,
+            )
+
+            // Prevent going back to the splash screen
+            finish()
+        }, 10_000)
         locationHelper = LocationHelper(this)
 
-        refreshButton.setOnClickListener {
-            loadWeatherFromCurrentLocation()
-        }
         temperatureText = findViewById(R.id.temperatureText)
         weatherText = findViewById(R.id.weatherText)
         feelsLikeText = findViewById(R.id.feelsLikeText)
-        humidityText = findViewById(R.id.humidityText)
-        windText = findViewById(R.id.windText)
-        precipitationText = findViewById(R.id.precipitationText)
         locationText = findViewById(R.id.locationText)
-        updatedText = findViewById(R.id.updatedText)
         progressBar = findViewById(R.id.progressBar)
-        refreshButton = findViewById(R.id.refreshButton)
+
+        weatherImage = findViewById(R.id.imageView)
 
         if (hasLocationPermission()) {
             loadWeatherFromCurrentLocation()
@@ -127,13 +142,9 @@ class MainActivity : AppCompatActivity() {
         temperatureText = findViewById(R.id.temperatureText)
         weatherText = findViewById(R.id.weatherText)
         feelsLikeText = findViewById(R.id.feelsLikeText)
-        humidityText = findViewById(R.id.humidityText)
-        windText = findViewById(R.id.windText)
-        precipitationText = findViewById(R.id.precipitationText)
         locationText = findViewById(R.id.locationText)
-        updatedText = findViewById(R.id.updatedText)
         progressBar = findViewById(R.id.progressBar)
-        refreshButton = findViewById(R.id.refreshButton)
+        weatherImage = findViewById(R.id.imageView)
     }
 
     private fun hasLocationPermission(): Boolean =
@@ -165,7 +176,7 @@ class MainActivity : AppCompatActivity() {
                 if (location == null) {
                     Toast
                         .makeText(
-                            this@MainActivity,
+                            this@SplashScreenActivity,
                             "Unable to determine your location.",
                             Toast.LENGTH_LONG,
                         ).show()
@@ -229,6 +240,10 @@ class MainActivity : AppCompatActivity() {
         val temperature =
             current.temperature_2m ?: Double.NaN
 
+        weatherImage.setImageResource(
+            changeImageFromWeatherCode(current.weather_code),
+        )
+
         temperatureText.text =
             if (temperature.isNaN()) {
                 "--"
@@ -247,30 +262,6 @@ class MainActivity : AppCompatActivity() {
                     ?.let { "${it.toInt()}°C" }
                     ?: "--"
             }"
-
-        humidityText.text =
-            "Humidity: ${
-                current.relative_humidity_2m
-                    ?.let { "${it.toInt()}%" }
-                    ?: "--"
-            }"
-
-        windText.text =
-            "Wind: ${
-                current.wind_speed_10m
-                    ?.let { "${it.toInt()} km/h" }
-                    ?: "--"
-            }"
-
-        precipitationText.text =
-            "Precipitation: ${
-                current.precipitation
-                    ?.let { "$it mm" }
-                    ?: "--"
-            }"
-
-        updatedText.text =
-            "Updated: ${current.time ?: "--"}"
 
         lifecycleScope.launch {
             val locationName =
@@ -298,7 +289,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 val geocoder =
                     Geocoder(
-                        this@MainActivity,
+                        this@SplashScreenActivity,
                         Locale.getDefault(),
                     )
 
@@ -349,8 +340,6 @@ class MainActivity : AppCompatActivity() {
             } else {
                 ProgressBar.GONE
             }
-
-        refreshButton.isEnabled = !loading
     }
 
     private fun weatherCodeToDescription(code: Int?): String =

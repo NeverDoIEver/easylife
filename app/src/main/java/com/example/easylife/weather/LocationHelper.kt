@@ -13,30 +13,19 @@ import kotlin.coroutines.resume
 class LocationHelper(
     private val context: Context,
 ) {
-    private val fusedLocationClient =
-        LocationServices.getFusedLocationProviderClient(context)
+    private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
 
     fun hasLocationPermission(): Boolean {
         val fine =
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION,
-            ) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
         val coarse =
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-            ) == PackageManager.PERMISSION_GRANTED
-
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         return fine || coarse
     }
 
     fun hasBackgroundLocationPermission(): Boolean =
-        ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
 
     suspend fun getCurrentLocation(): Location? {
         if (!hasLocationPermission()) {
@@ -44,14 +33,12 @@ class LocationHelper(
         }
 
         return suspendCancellableCoroutine { continuation ->
-
             try {
                 fusedLocationClient
                     .getCurrentLocation(
                         Priority.PRIORITY_BALANCED_POWER_ACCURACY,
                         null,
                     ).addOnSuccessListener { location ->
-
                         if (continuation.isActive) {
                             continuation.resume(location)
                         }
